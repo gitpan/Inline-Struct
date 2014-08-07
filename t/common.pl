@@ -7,10 +7,18 @@ sub run_struct_tests {
   $o->dnum(3.1415);
   $o->str('Wazzup?');
   my %vals = (inum => 10, dnum => 3.1415, str => 'Wazzup?');
-  is $o->$_(), $vals{$_}, $_ for @{$o->_KEYS};
+  is $o->$_(), $vals{$_}, $_ for qw(inum str);
+  ok eq_float($o->dnum(), $vals{dnum}), 'dnum';
   is_deeply $o->_HASH, { qw(inum 10 dnum 3.1415 str Wazzup?) }, '_HASH method';
   is_deeply $o->_KEYS, [ qw(inum dnum str) ], '_KEYS method';
   is_deeply $o->_VALUES, [ qw(10 3.1415 Wazzup?) ], '_VALUES method';
+}
+
+my $EPSILON = 1e-6;
+# true if same within $EPSILON
+sub eq_float {
+  my ($f1, $f2) = @_;
+  abs(($f1//0) - ($f2//0)) <= $EPSILON;
 }
 
 1;
