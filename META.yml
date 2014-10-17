@@ -18,9 +18,11 @@ no_index:
     - t
     - inc
 requires:
+  ExtUtils::MakeMaker: '6.48'
   Inline: '0.66'
   Inline::C: '0.62'
   Test::More: '0.88'
+  perl: '5.01'
 resources:
   repository: https://github.com/mohawk2/Inline-Struct.git
-version: '0.11'
+version: '0.12'

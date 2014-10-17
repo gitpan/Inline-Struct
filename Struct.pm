@@ -7,7 +7,7 @@ require Inline::Struct::grammar;
 use Data::Dumper;
 
 use vars qw($VERSION);
-$VERSION = '0.11';
+$VERSION = '0.12';
 
 #=============================================================================
 # Inline::Struct is NOT an ILSM: no register() function
@@ -43,15 +43,15 @@ sub parse {
 
     $o->{STRUCT}{'.xs'} = "";
     $o->{STRUCT}{'.macros'} = <<END;
-#define NEW_INLINE_STRUCT(targ,type) INLINE_STRUCT_NEW_##type(targ)
-#define INLINE_STRUCT_FIELDS(type) INLINE_STRUCT_FIELDS_##type
-#define INLINE_STRUCT_INIT_LIST(targ,type) INLINE_STRUCT_INITL_##type(targ)
-#define INLINE_STRUCT_INIT_AREF(src,targ,type) INLINE_STRUCT_INITA_##type(src,targ)
-#define INLINE_STRUCT_INIT_HREF(src,targ,type) INLINE_STRUCT_INITH_##type(src,targ)
-#define INLINE_STRUCT_ARRAY(src,targ,type) INLINE_STRUCT_ARRAY_##type(src,targ)
-#define INLINE_STRUCT_VALUES(src,targ,type) INLINE_STRUCT_ARRAY_##type(src,targ)
-#define INLINE_STRUCT_HASH(src,targ,type) INLINE_STRUCT_HASH_##type(src,targ)
-#define INLINE_STRUCT_KEYS(src,targ,type) INLINE_STRUCT_KEYS_##type(src,targ)
+#define NEW_INLINE_STRUCT(_IS_targ,_IS_type) INLINE_STRUCT_NEW_##_IS_type(_IS_targ)
+#define INLINE_STRUCT_FIELDS(_IS_type) INLINE_STRUCT_FIELDS_##_IS_type
+#define INLINE_STRUCT_INIT_LIST(_IS_targ,_IS_type) INLINE_STRUCT_INITL_##_IS_type(_IS_targ)
+#define INLINE_STRUCT_INIT_AREF(_IS_src,_IS_targ,_IS_type) INLINE_STRUCT_INITA_##_IS_type(_IS_src,_IS_targ)
+#define INLINE_STRUCT_INIT_HREF(_IS_src,_IS_targ,_IS_type) INLINE_STRUCT_INITH_##_IS_type(_IS_src,_IS_targ)
+#define INLINE_STRUCT_ARRAY(_IS_src,_IS_targ,_IS_type) INLINE_STRUCT_ARRAY_##_IS_type(_IS_src,_IS_targ)
+#define INLINE_STRUCT_VALUES(_IS_src,_IS_targ,_IS_type) INLINE_STRUCT_ARRAY_##_IS_type(_IS_src,_IS_targ)
+#define INLINE_STRUCT_HASH(_IS_src,_IS_targ,_IS_type) INLINE_STRUCT_HASH_##_IS_type(_IS_src,_IS_targ)
+#define INLINE_STRUCT_KEYS(_IS_src,_IS_targ,_IS_type) INLINE_STRUCT_KEYS_##_IS_type(_IS_src,_IS_targ)
 END
 
     my @struct_list;
@@ -73,35 +73,40 @@ END
 
 	# Set up the initial part of the macros
 	$NEW = <<END;
-#define INLINE_STRUCT_NEW_${struct}(targ) { \\
+#define INLINE_STRUCT_NEW_${struct}(_IS_targ) { \\
 	HV *hv = get_hv("Inline::Struct::${struct}::_map_", 1); \\
 	HV *entry = newHV(); \\
 	SV *entrv = (SV*)newRV((SV*)entry); \\
 	SV *lookup; \\
 	char *key; \\
 	STRLEN klen; \\
-	Newz(1564,targ,1,$cname); \\
-	lookup = newSViv((IV)targ); \\
+	ENTER; \\
+	SAVETMPS; \\
+	Newz(1564,_IS_targ,1,$cname); \\
+	lookup = newSViv((IV)_IS_targ); \\
 	key = SvPV(lookup, klen); \\
+	sv_2mortal(lookup); \\
 	hv_store(entry, "REFCNT", 6, newSViv(0), 0); \\
 	hv_store(entry, "FREE", 4, newSViv(1), 0); \\
 	hv_store(hv, key, klen, entrv, 0); \\
+	FREETMPS; \\
+	LEAVE; \\
 }
 END
 	$FIELDS = "#define INLINE_STRUCT_FIELDS_$struct " .
 	  (scalar @{$parser->{data}{struct}{$struct}{fields}}) . "\n";
-	$INITL = "#define INLINE_STRUCT_INITL_$struct(targ) {\\\n";
+	$INITL = "#define INLINE_STRUCT_INITL_$struct(_IS_targ) {\\\n";
 	$INITA = <<END;
-#define INLINE_STRUCT_INITA_$struct(src,targ) { \\
-AV *av = (AV*)SvRV(src); \\
+#define INLINE_STRUCT_INITA_$struct(_IS_src,_IS_targ) { \\
+AV *av = (AV*)SvRV(_IS_src); \\
 int l = av_len(av) + 1; \\
 int i; \\
 for (i=0; i<l; i++) { \\
 SV *val = *av_fetch(av, i, 0); \\
 END
 	$INITH = <<END;
-#define INLINE_STRUCT_INITH_$struct(src,targ) { \\
-HV *hv = (HV*)SvRV(src); \\
+#define INLINE_STRUCT_INITH_$struct(_IS_src,_IS_targ) { \\
+HV *hv = (HV*)SvRV(_IS_src); \\
 int l = hv_iterinit(hv); \\
 int i; \\
 for (i=0; i<l; i++) { \\
@@ -111,17 +116,17 @@ char *k = hv_iterkey(he,&retlen); \\
 SV *val = hv_iterval(hv,he); \\
 END
         $HASH = <<END;
-#define INLINE_STRUCT_HASH_$struct(src,targ) \\
-hv_clear(targ); \\
+#define INLINE_STRUCT_HASH_$struct(_IS_src,_IS_targ) \\
+hv_clear(_IS_targ); \\
 END
         $ARRAY = <<END;
-#define INLINE_STRUCT_ARRAY_$struct(src,targ) \\
-av_clear(targ); \\
+#define INLINE_STRUCT_ARRAY_$struct(_IS_src,_IS_targ) \\
+av_clear(_IS_targ); \\
 END
 
 	$KEYS = <<END;
-#define INLINE_STRUCT_KEYS_$struct(src,targ) \\
-av_clear(targ); \\
+#define INLINE_STRUCT_KEYS_$struct(_IS_src,_IS_targ) \\
+av_clear(_IS_targ); \\
 END
 
         my $maxi = scalar @{$parser->{data}{struct}{$struct}{fields}};
@@ -161,8 +166,11 @@ DESTROY(object)
         STRLEN klen;
         char *key;
     CODE:
+	ENTER;
+	SAVETMPS;
         lookup = newSViv((IV)object);
         key = SvPV(lookup, klen);
+	sv_2mortal(lookup);
         if (hv_exists(map, key, klen)) {
             HV *info = (HV*)SvRV(*hv_fetch(map, key, klen, 0));
             SV *refcnt = *hv_fetch(info, "REFCNT", 6, 0);
@@ -174,6 +182,8 @@ DESTROY(object)
             else
               sv_dec(refcnt);
         }
+	FREETMPS;
+	LEAVE;
 
 HV *
 _HASH(object)
@@ -219,21 +229,21 @@ END
 	    my $type = $parser->{data}{struct}{$struct}{field}{$field};
 	    my $q = ($i == 1 ? 'if' : 'else if');
 	    my $t =
-	      typeconv($o, "targ->$field",
+	      typeconv($o, "_IS_targ->$field",
 			   "val",
 			   $type,
 			   "input_expr",
 			   1,
 			  );
 	    my $s =
-	      typeconv($o, "src->$field",
+	      typeconv($o, "_IS_src->$field",
 			   "tmp",
 			   $type,
 			   "output_expr",
 			   1,
 			  );
 	    $INITL .=
-	      (typeconv($o, "targ->$field",
+	      (typeconv($o, "_IS_targ->$field",
 			    "ST($i)",
 			    $type,
 			    "input_expr",
@@ -243,28 +253,19 @@ END
 	    $INITA .= qq{$q(i == ${\($i-1)}) \\\n$t; \\\n};
 	    $INITH .= qq{$q(strEQ(k, "$field")) \\\n$t;\\\n};
 	    $HASH .= (qq{{\\\n\tSV*tmp=newSViv(0);\\\n$s \\
-\thv_store(targ, "$field", $flen, tmp, 0); \\\n}} .
+\thv_store(_IS_targ, "$field", $flen, tmp, 0); \\\n}} .
 		      ($i == $maxi ? "" : "\\") .
 		      "\n"
 		     );
 	    $ARRAY .= (qq{{\\\n\tSV*tmp=newSViv(0);\\\n$s \\
-\tav_push(targ, tmp); \\\n}} .
+\tav_push(_IS_targ, tmp); \\\n}} .
 		       ($i == $maxi ? "" : "\\") .
 		       "\n"
 		      );
-	    $KEYS .= (qq{av_push(targ, newSVpv("$field", 0));} .
+	    $KEYS .= (qq{av_push(_IS_targ, newSVpv("$field", 0));} .
 		      ($i == $maxi ? "" : "\\") .
 		      "\n"
 		     );
-	    my $field2st1 = typeconv(
-	      $o, "object->$field", "ST(1)", $type, "input_expr",
-	    );
-	    my $object2retval = typeconv(
-	      $o, "object", "retval", "$cname *", "output_expr",
-	    );
-	    my $field2retval = typeconv(
-	      $o, "object->$field", "retval", $type, "output_expr",
-	    );
 	    $o->{STRUCT}{'.xs'} .= sprintf <<EOF;
 void
 $field(object, ...)
@@ -272,13 +273,29 @@ $field(object, ...)
     PREINIT:
 	SV *retval = newSViv(0);
     PPCODE:
-	if (items != 1) {
-	    $field2st1;
-	    $object2retval;
+	ENTER;
+	SAVETMPS;
+	if (items == 1) {
+	    @{[typeconv($o, "object->$field", "retval", $type, "output_expr")]}
 	}
 	else {
-	    $field2retval;
+	    @{[
+	    $type =~ /^SV\s*\*$/ ?
+		qq{if (object->$field && SvOK(object->$field)) {
+		    SvREFCNT_dec(object->$field);
+		}} : ""
+	    ]}
+	    @{[typeconv($o, "object->$field", "ST(1)", $type, "input_expr")]};
+	    @{[
+	    $type =~ /^SV\s*\*$/ ?
+		qq{if (object->$field && SvOK(object->$field)) {
+		    SvREFCNT_inc(object->$field);
+		}} : ""
+	    ]}
+	    @{[typeconv($o, "object", "retval", "$cname *", "output_expr")]};
 	}
+	FREETMPS;
+	LEAVE;
 	XPUSHs(sv_2mortal(retval));
 
 EOF
