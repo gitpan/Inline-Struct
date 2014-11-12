@@ -6,12 +6,14 @@ README
 Struct.pm
 Struct.pod
 TODO
+benchmark
 grammar/grammar.pm
 grammar/Makefile.PL
 t/all.t
 t/anon.t
 t/common.pl
 t/copyref.t
+t/oneline.t
 t/readme.t
 t/refcnt.t
 t/srcmember.t
