@@ -7,7 +7,7 @@ require Inline::Struct::grammar;
 use Data::Dumper;
 
 use vars qw($VERSION);
-$VERSION = '0.15';
+$VERSION = '0.16';
 
 #=============================================================================
 # Inline::Struct is NOT an ILSM: no register() function
@@ -280,6 +280,10 @@ $field(object, ...)
 	SAVETMPS;
 	if (items == 1) {
 	    @{[typeconv($o, "object->$field", "retval", $type, "output_expr")]}
+	    @{[
+	    # mortalise if not an SV *
+	    $type =~ /^SV\s*\*$/ ? '' : 'mortalise_retval = 1;'
+	    ]}
 	}
 	else {
 	    @{[
