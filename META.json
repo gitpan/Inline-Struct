@@ -4,7 +4,7 @@
       "unknown"
    ],
    "dynamic_config" : 1,
-   "generated_by" : "ExtUtils::MakeMaker version 7, CPAN::Meta::Converter version 2.140640",
+   "generated_by" : "ExtUtils::MakeMaker version 7.02, CPAN::Meta::Converter version 2.143240",
    "license" : [
       "unknown"
    ],
@@ -48,5 +48,5 @@
          "web" : "https://github.com/mohawk2/Inline-Struct"
       }
    },
-   "version" : "0.16"
+   "version" : "0.17"
 }
